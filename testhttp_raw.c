@@ -17,7 +17,7 @@
 #define BUFFER_SIZE      1024
 #define HOST_SIZE      1024
 #define PORT_SIZE      32
-
+#define MAX_REQUEST_LEN      1024
 
 static const char bye_string[] = "BYE";
 
@@ -52,9 +52,12 @@ int main (int argc, char *argv[]) {
     int rc;
     int sock;
     struct addrinfo addr_hints, *addr_result;
-    char line[BUFFER_SIZE];
+    char request[MAX_REQUEST_LEN];
+    char request_template[] = "GET / HTTP/1.1\r\nHost: %s\r\n\r\n";
+    int request_len;
     char host[HOST_SIZE];
     char port[PORT_SIZE];
+    char buffer[BUFFER_SIZE];
 
     /* Kontrola dokumentów ... */
     if (argc != 4) {
@@ -86,15 +89,40 @@ int main (int argc, char *argv[]) {
     }
     freeaddrinfo(addr_result);
 
-    do {
-        printf("line:");
-        fgets(line, sizeof line, stdin);
-        if (write(sock, line, strlen (line)) < 0)
-            syserr("writing on stream socket");
+    //Most interesting part
+
+    //Prepare request
+    request_len = snprintf(request, MAX_REQUEST_LEN, request_template, host);
+    if (request_len >= MAX_REQUEST_LEN) {
+        //TODO add handling chunk request ???
+        fatal("request length large: %d\n", request_len);
     }
-    while (strncmp(line, bye_string, sizeof bye_string - 1));
-    if (close(sock) < 0)
-        syserr("closing stream socket");
+
+    int nbytes_last;
+    int nbytes_total = 0;
+    while (nbytes_total < request_len) {
+        nbytes_last = write(sock, request + nbytes_total, request_len - nbytes_total);
+        if (nbytes_last == -1) {
+            perror("write");
+            exit(EXIT_FAILURE);
+        }
+        nbytes_total += nbytes_last;
+    }
+
+    /* Read the response. */
+    fprintf(stderr, "debug: before first read\n");
+    while ((nbytes_total = read(sock, buffer, BUFSIZ)) > 0) {
+        fprintf(stderr, "debug: after a read\n");
+        write(STDOUT_FILENO, buffer, nbytes_total);
+    }
+    fprintf(stderr, "debug: after last read\n");
+    if (nbytes_total == -1) {
+        perror("read");
+        exit(EXIT_FAILURE);
+    }
+
+    close(sock);
+    exit(EXIT_SUCCESS);
 
     return 0;
 }
