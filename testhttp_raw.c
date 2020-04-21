@@ -21,10 +21,34 @@
 
 static const char bye_string[] = "BYE";
 
+void set_addr_hints(struct addrinfo *addr_hints) {
+    memset(addr_hints, 0, sizeof(struct addrinfo));
+    addr_hints->ai_flags = 0;
+    addr_hints->ai_family = AF_INET;
+    addr_hints->ai_socktype = SOCK_STREAM;
+    addr_hints->ai_protocol = IPPROTO_TCP;
+}
+
+int parse_host_port(char *host, char *port, char *host_port){
+    char *delimiter = strchr(host_port,':');
+    int host_len = delimiter - host_port;
+    strncpy(host, host_port, host_len);
+    host[host_len] = '\0';
+    printf("%s\n", host);
+    strcpy(port, host_port + host_len + 1);
+    printf("%s\n", port);
+}
+
+FILE *get_file(file_name){
+    FILE *cookies_file;
+    if ((cookies_file = fopen(file_name, "r"))) {
+        fclose(cookies_file);
+        fatal("Nie ma takiego pliku %s", file_name);
+    }
+    return cookies_file;
+}
+
 int main (int argc, char *argv[]) {
-
-    printf("Hello");
-
     int rc;
     int sock;
     struct addrinfo addr_hints, *addr_result;
@@ -42,29 +66,14 @@ int main (int argc, char *argv[]) {
         syserr("socket");
     }
 
-    /* Trzeba się dowiedzieć o adres internetowy serwera. */
-    memset(&addr_hints, 0, sizeof(struct addrinfo));
-    addr_hints.ai_flags = 0;
-    addr_hints.ai_family = AF_INET;
-    addr_hints.ai_socktype = SOCK_STREAM;
-    addr_hints.ai_protocol = IPPROTO_TCP;
-
+    //Set addr_hints
+    set_addr_hints(&addr_hints);
 
     //Parse host:port
-    char *delimiter = strchr(argv[1],':');
-    int host_len = delimiter - argv[1];
-    strncpy(host, argv[1], host_len);
-    host[host_len] = '\0';
-    printf("%s\n", host);
-    strcpy(port, argv[1] + host_len + 1);
-    printf("%s\n", port);
+    parse_host_port(host, port, argv[1]);
 
     //Open file
-    FILE *cookies_file;
-    if ((cookies_file = fopen(argv[2], "r"))){
-        fclose(cookies_file);
-        fatal("Nie ma takiego pliku %s", argv[2]);
-    }
+    FILE *cookies_file = get_file(argv[2]);
 
     rc =  getaddrinfo(host, port, &addr_hints, &addr_result);
     if (rc != 0) {
