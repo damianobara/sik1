@@ -33,9 +33,33 @@ void set_addr_hints(struct addrinfo *addr_hints) {
 int parse_host_port(char *host, char *port, char *host_port){
     char *delimiter = strchr(host_port,':');
     int host_len = delimiter - host_port;
+    if (host_len < 1) {
+        fatal("host");
+    }
     strncpy(host, host_port, host_len);
     host[host_len] = '\0';
     strcpy(port, host_port + host_len + 1);
+    if (strlen(port) < 1) {
+        fatal("port");
+    }
+}
+
+int parse_request_resourse(char resource[], char target[], char host[]) {
+    if (strncmp(resource, "http://", strlen("http://")) != 0) {
+        fatal("not http");
+    }
+    if (strncmp(resource, "https://", strlen("https://")) == 0) {
+        fatal("https");
+    }
+    char *target_start = strchr(resource + strlen("http://"), '/');
+    if (!target_start) {
+        strcpy(host, resource + strlen("http://"));
+        strcpy(target, "/\0");
+    }
+    else {
+        strncpy(host, resource + strlen("http://"), target_start - (resource + strlen("http://")));
+        strcpy(target, target_start);
+    }
 }
 
 FILE *get_file_desc(char *file_name){
@@ -47,13 +71,19 @@ FILE *get_file_desc(char *file_name){
     return cookies_file;
 }
 
-int prepare_request_head(char *request_head, char *host_port, char *resource) {
+int prepare_request_head(char *request_head, char *resource) {
     int request_head_len = 0;
+    char host[HOST_SIZE];
+    char target[HOST_SIZE];
     char get_header_template[] = "GET %s HTTP/1.1\n";
     char host_header_template[] = "Host: %s\n";
     char cookie_header_head[] = "Cookie: ";
-    request_head_len = snprintf(request_head, MAX_REQUEST_HEAD_LEN, get_header_template, resource);
-    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, host_header_template, host_port);
+    parse_request_resourse(resource, target, host);
+    printf( "HOST %s\n", host);
+    printf("TARGET %s\n", target);
+
+    request_head_len = snprintf(request_head, MAX_REQUEST_HEAD_LEN, get_header_template, target);
+    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, host_header_template, host);
     request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, cookie_header_head);
 //    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, connection_close_header);
 
@@ -96,6 +126,9 @@ int main (int argc, char *argv[]) {
     FILE *cookies_file;
     char cookies[COOKIES_MAX_SIZE];
 
+//    char a[HOST_SIZE];
+//    char b [HOST_SIZE];
+//    parse_request_resourse(argv[3], a, b);
 
     /* Kontrola dokumentów ... */
     if (argc != 4) {
@@ -130,7 +163,7 @@ int main (int argc, char *argv[]) {
     //Most interesting part
 
     //Prepare request_head
-    int request_head_len = prepare_request_head(request_head, argv[1], argv[3]);
+    int request_head_len = prepare_request_head(request_head, argv[3]);
     write(sock, request_head, request_head_len);
 
     int nbytes_last;
@@ -148,13 +181,30 @@ int main (int argc, char *argv[]) {
             nbytes_total += nbytes_last;
         }
     }
+    //TODO ZMIENIC REQUEST
     // Close connection
     char connection_close_header[] = "\nConnection: close\n\n";
     write(sock, connection_close_header, strlen(connection_close_header));
 
+    printf("READ PART\n");
     /* Read the response. */
     fprintf(stderr, "debug: before first read\n");
     memset(buffer, 0, sizeof(buffer));
+    nbytes_total = read(sock, buffer, BUFSIZ);
+    if (nbytes_total == -1) {
+        fatal("read");
+    }
+    char *token = NULL;
+    token = strtok(buffer, "\n");
+    // Not 200 OK
+    if (strstr(buffer, "200 OK") == 0) {
+        printf("%s", token);
+        return 0;
+    }
+    // 200 OK
+    int set_cookie_start = strstr(buffer, "Set-Cookie:");
+    printf("%s", set_cookie_start);
+
     while ((nbytes_total = read(sock, buffer, BUFSIZ)) > 0) {
         fprintf(stderr, "debug: after a read\n");
         write(STDOUT_FILENO, buffer, nbytes_total);
