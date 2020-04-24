@@ -1,22 +1,18 @@
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "err.h"
 
-int is_status_200(char response[]) {
+size_t is_status_200(char response[]) {
     return  strstr(buffer, "200 OK") != 0;
 }
 
-int print_status(char response[]) {
+size_t print_status(char response[]) {
     print("%s", response);
 }
 
-int parse_request_resourse(char resource[], char target[], char host[]) {
+void parse_request_resourse(char resource[], char target[], char host[]) {
     if (strncmp(resource, "http://", strlen("http://")) != 0) {
         fatal("not http");
     }
@@ -35,7 +31,7 @@ int parse_request_resourse(char resource[], char target[], char host[]) {
 }
 
 
-int prepare_request_head(char *resource, char *request_head, char *request_head_len) {
+size_t prepare_request_head(char *resource, char *request_head, char *request_head_len) {
     int request_head_len = 0;
     char host[HOST_SIZE];
     char target[HOST_SIZE];

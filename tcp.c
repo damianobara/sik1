@@ -8,7 +8,7 @@
 #define HOST_SIZE      256
 #define PORT_SIZE      16
 
-int parse_host_port(char *host, char *port, char *host_port){
+void parse_host_port(char *host, char *port, char *host_port){
     char *delimiter = strchr(host_port,':');
     int host_len = delimiter - host_port;
     if (host_len < 1) {
@@ -42,13 +42,9 @@ int set_connection(char host_port[]) {
         syserr("socket");
     }
 
-    //Set addr_hints
     set_addr_hints(&addr_hints);
 
-    //Parse host:port
     parse_host_port(host, port, host_port);
-
-    //Open file
 
     rc =  getaddrinfo(host, port, &addr_hints, &addr_result);
     if (rc != 0) {
@@ -63,7 +59,7 @@ int set_connection(char host_port[]) {
     return sock;
 }
 
-int send_data(size_t socket, buffer, buffer_size) {
+size_t send_data(size_t socket, buffer, buffer_size) {
     size_t nbytes_last, nbytes_total = 0;
     nbytes_total = 0;
     while (nbytes_total < buffer) {

@@ -1,9 +1,3 @@
-/*
- Program uruchamiamy z dwoma parametrami: nazwa serwera i numer jego portu.
- Program spróbuje połączyć się z serwerem, po czym będzie od nas pobierał
- linie tekstu i wysyłał je do serwera.  Wpisanie BYE kończy pracę.
-*/
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,8 +8,6 @@
 #include <unistd.h>
 #include "err.h"
 
-#define REQUEST_HEAD_LEN      1024
-#define COOKIES_MAX_SIZE    204800
 #define MAX_HEADER_SIZE 8192
 #define cookies buffer
 #define cookies_len buffer_len
@@ -23,10 +15,6 @@
 #define response_len buffer_len
 #define data    buffer_ptr
 #define header  buffer_ptr
-#define data_
-#define NOT_YET 0
-#define NOW 1
-#define
 
 int main (int argc, char *argv[]) {
     char buffer[BUFSIZ];
@@ -37,6 +25,7 @@ int main (int argc, char *argv[]) {
 
     sock = set_connection(argv[1]);
 
+    FILE *a;
     //Prepare request_head
     buffer_len = prepare_request_head(argv[3], buffer, &buffer_len);
     send_data(sock, buffer, buffer_len);
