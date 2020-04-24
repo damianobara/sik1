@@ -14,228 +14,57 @@
 #include <unistd.h>
 #include "err.h"
 
-#define HOST_SIZE      256
-#define PORT_SIZE      16
 #define REQUEST_HEAD_LEN      1024
 #define COOKIES_MAX_SIZE    204800
-#define MAX_COOKIE_LINE 5000
-#define MAX_NAME 4096
-
-
-int parse_host_port(char *host, char *port, char *host_port){
-    char *delimiter = strchr(host_port,':');
-    int host_len = delimiter - host_port;
-    if (host_len < 1) {
-        fatal("host");
-    }
-    strncpy(host, host_port, host_len);
-    host[host_len] = '\0';
-    strcpy(port, host_port + host_len + 1);
-    if (strlen(port) < 1) {
-        fatal("port");
-    }
-}
-
-int parse_request_resourse(char resource[], char target[], char host[]) {
-    if (strncmp(resource, "http://", strlen("http://")) != 0) {
-        fatal("not http");
-    }
-    if (strncmp(resource, "https://", strlen("https://")) == 0) {
-        fatal("https");
-    }
-    char *target_start = strchr(resource + strlen("http://"), '/');
-    if (!target_start) {
-        strcpy(host, resource + strlen("http://"));
-        strcpy(target, "/\0");
-    }
-    else {
-        strncpy(host, resource + strlen("http://"), target_start - (resource + strlen("http://")));
-        strcpy(target, target_start);
-    }
-}
-
-FILE *get_file_desc(char *file_name){
-    FILE *cookies_file;
-    if (!(cookies_file = fopen(file_name, "r"))) {
-        fclose(cookies_file);
-        fatal("Nie ma takiego pliku %s", file_name);
-    }
-    return cookies_file;
-}
-
-int prepare_request_head(char *request_head, char *resource) {
-    int request_head_len = 0;
-    char host[HOST_SIZE];
-    char target[HOST_SIZE];
-    char get_header_template[] = "GET %s HTTP/1.1\n";
-    char host_header_template[] = "Host: %s\n";
-    char cookie_header_head[] = "Cookie: ";
-    parse_request_resourse(resource, target, host);
-    printf( "HOST %s\n", host);
-    printf("TARGET %s\n", target);
-
-    request_head_len = snprintf(request_head, REQUEST_HEAD_LEN, get_header_template, target);
-    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, host_header_template, host);
-    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, cookie_header_head);
-//    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, connection_close_header);
-
-    printf("%s", request_head);
-    return request_head_len;
-}
-
-int read_cookies(FILE **cookies_file, char cookies[]) {
-    int cookies_len = 0;
-    char * cookie_line = NULL;
-    size_t cookie_line_len = 0;
-    ssize_t read, len;
-    int read_sth = 0;
-    while ((read = getline(&cookie_line, &len, *cookies_file)) != -1) {
-        read_sth = 1;
-        cookie_line_len = strlen(cookie_line);
-        if (cookie_line_len < COOKIES_MAX_SIZE - cookies_len) {
-            strcpy(cookies + cookies_len, cookie_line);
-            cookies[cookies_len + cookie_line_len - 1] = ';';
-            cookies[cookies_len + cookie_line_len] = ' ';
-            cookies_len += cookie_line_len + 1;
-        }
-        else{
-            //tu trzba przesunac wskaznik pliku z powrotem
-            break;
-        }
-    }
-    printf("%s", cookies);
-    return read_sth && (cookie_line_len < COOKIES_MAX_SIZE - cookies_len);
-}
-
-#define ISBLANK(x)  (int)((((unsigned char)x) == ' ') ||        \
-                          (((unsigned char)x) == '\t'))
-
-int get_cookie_size(char * tab) {
-    char *tabptr = tab;
-    while(tabptr && !ISBLANK(tabptr))
-        tabptr++;
-    return tabptr - tab;
-}
-
-int find_cookies(char response[], char *cookie) {
-    char *responseptr;
-    if (responseptr = strstr(responseptr, "Set-Cookie:") == 0) {
-        //to nie jest linia z set-cookie
-        return 0;
-    }
-    responseptr += 11;
-    while (*responseptr && ISBLANK(*responseptr))
-        responseptr++;
-
-    strncpy(cookie, responseptr, get_cookie_size);
-}
+#define MAX_HEADER_SIZE 8192
+#define cookies buffer
+#define cookies_len buffer_len
+#define response buffer
+#define response_len buffer_len
+#define data    buffer_ptr
+#define header  buffer_ptr
+#define data_
+#define NOT_YET 0
+#define NOW 1
+#define
 
 int main (int argc, char *argv[]) {
-    int rc;
-    int sock;
-    struct addrinfo addr_hints, *addr_result;
-    char request_head[REQUEST_HEAD_LEN];
-    char host[HOST_SIZE];
-    char port[PORT_SIZE];
-    char buffer[BUFFER_SIZE];
-    FILE *cookies_file;
-    char cookies[COOKIES_MAX_SIZE];
+    char buffer[BUFSIZ];
+    char *buffer_ptr;
+    size_t sock, buffer_len, data_section, headers_section, chunked, header_len, data_processed, chunked_data_size;
 
-//    char a[HOST_SIZE];
-//    char b [HOST_SIZE];
-//    parse_request_resourse(argv[3], a, b);
+    if (argc != 4) fatal("Usage: %s connectio-host:connection-port file resource-adress", argv[0]);
 
-    /* Kontrola dokumentów ... */
-    if (argc != 4) {
-        fatal("Usage: %s connectio-host:connection-port file resource-adress", argv[0]);
-    }
-
-    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0) {
-        syserr("socket");
-    }
-
-    //Set addr_hints
-    set_addr_hints(&addr_hints);
-
-    //Parse host:port
-    parse_host_port(host, port, argv[1]);
-
-    //Open file
-    cookies_file = get_file_desc(argv[2]);
-
-    rc =  getaddrinfo(host, port, &addr_hints, &addr_result);
-    if (rc != 0) {
-        fprintf(stderr, "rc=%d\n", rc);
-        syserr("getaddrinfo: %s", gai_strerror(rc));
-    }
-
-    if (connect(sock, addr_result->ai_addr, addr_result->ai_addrlen) != 0) {
-        syserr("connect");
-    }
-    freeaddrinfo(addr_result);
-
-    //Most interesting part
+    sock = set_connection(argv[1]);
 
     //Prepare request_head
-    int request_head_len = prepare_request_head(request_head, argv[3]);
-    write(sock, request_head, request_head_len);
+    buffer_len = prepare_request_head(argv[3], buffer, &buffer_len);
+    send_data(sock, buffer, buffer_len);
 
-    int nbytes_last;
-    int nbytes_total = 0;
-    int cookies_len;
-    while (read_cookies(&cookies_file, cookies)){
-        cookies_len = strlen(cookies);
-        printf("%s\n", cookies);
-        while (nbytes_total < cookies_len) {
-            nbytes_last = write(sock, cookies + nbytes_total, cookies_len - nbytes_total);
-            if (nbytes_last == -1) {
-                perror("write");
-                exit(EXIT_FAILURE);
-            }
-            nbytes_total += nbytes_last;
-        }
+     while (read_cookies(&cookies_file, cookies, &cookies_len)) {
+        send_data(sock, cookies, cookies_len);
     }
-    //TODO ZMIENIC REQUEST
     // Close connection
-    char connection_close_header[] = "\nConnection: close\n\n";
-    write(sock, connection_close_header, strlen(connection_close_header));
+    prepare_close_header(buffer, buffer_len);
+    send_data(sock, buffer, buffer_len);
 
-    printf("READ PART\n");
-    /* Read the response. */
-    fprintf(stderr, "debug: before first read\n");
-
-    int first = 1;
-    while ((nbytes_total = read(sock, buffer, BUFSIZ)) > 0) {
-        memset(buffer, 0, sizeof(buffer));
-        nbytes_total = read(sock, buffer, BUFSIZ);
-        if (nbytes_total == -1) {
-            fatal("read");
-        }
-//    write(STDOUT_FILENO, buffer, nbytes_total);
-        if (first) {
-            char *token = NULL;
-            token = strtok(buffer, "\n");
-            // Not 200 OK
-            if (strstr(buffer, "200 OK") == 0) {
-                printf("%s", token);
-                return 0;
-            }
+    headers_section = 1;
+    data_section = 0;
+    while ((response_len = read(sock, response, BUFSIZ)) > 0) {
+        if (!is_status_200(response)) {
+            print_status(response);
+            return 0;
         }
 
-        // 200 OK
-
-
-
-        fprintf(stderr, "debug: after a read\n");
-        write(STDOUT_FILENO, buffer, nbytes_total);
+        while(headers_section && get_header(response, response_len, &header, &header_len, MAX_HEADER_SIZE, &headers_section, &data_section)) {
+            chunked = is_chunked(header, MAX_HEADER_SIZE);
+            handle_cookie(header, header_len);
+        }
+        if (data_section && chunked) {
+            chunked_data_size = get_chunked_data_size(response, response_len);
+        }
+        while(data_section && process_data(response, response_len, &data, &data_len, &data_processed, data_section));
     }
-    fprintf(stderr, "debug: after last read\n");
-    if (nbytes_total == -1) {
-        perror("read");
-        exit(EXIT_FAILURE);
-    }
-
     close(sock);
     exit(EXIT_SUCCESS);
 

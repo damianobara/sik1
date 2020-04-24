@@ -1,3 +1,63 @@
+#define ISBLANK(x)  (int)((((unsigned char)x) == ' ') ||        \
+                          (((unsigned char)x) == '\t'))
+
+int find_cookies(char response[], char *cookie) {
+    char *responseptr;
+    if (responseptr = strstr(responseptr, "Set-Cookie:") == 0) {
+        //to nie jest linia z set-cookie
+        return 0;
+    }
+    responseptr += 11;
+    while (*responseptr && ISBLANK(*responseptr))
+        responseptr++;
+
+    strncpy(cookie, responseptr, get_cookie_size);
+}
+
+
+int get_cookie_size(char * tab) {
+    char *tabptr = tab;
+    while(tabptr && !ISBLANK(tabptr))
+        tabptr++;
+    return tabptr - tab;
+}
+
+FILE *get_file_desc(char *file_name){
+    FILE *cookies_file;
+    if (!(cookies_file = fopen(file_name, "r"))) {
+        fclose(cookies_file);
+        fatal("Nie ma takiego pliku %s", file_name);
+    }
+    return cookies_file;
+}
+
+int read_cookies(FILE **cookies_file, char cookies[] ,size_t *cookies_string_len) {
+    int cookies_len = 0;
+    char * cookie_line = NULL;
+    size_t cookie_line_len = 0;
+    ssize_t read, len;
+    int read_sth = 0;
+    while ((read = getline(&cookie_line, &len, *cookies_file)) != -1) {
+        read_sth = 1;
+        cookie_line_len = strlen(cookie_line);
+        if (cookie_line_len < COOKIES_MAX_SIZE - cookies_len) {
+            strcpy(cookies + cookies_len, cookie_line);
+            cookies[cookies_len + cookie_line_len - 1] = ';';
+            cookies[cookies_len + cookie_line_len] = ' ';
+            cookies_len += cookie_line_len + 1;
+        }
+        else{
+            //tu trzba przesunac wskaznik pliku z powrotem
+            break;
+        }
+    }
+    printf("%s", cookies);
+    *cookies_string_len = strlen(cookies)
+    return read_sth && (cookie_line_len < COOKIES_MAX_SIZE - cookies_len);
+}
+
+
+
 struct CookieInfo *Curl_cookie_init(struct Curl_easy *data,
                                     const char *file,
                                     struct CookieInfo *inc,

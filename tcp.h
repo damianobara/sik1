@@ -1,0 +1,6 @@
+#ifndef DUZE_ZADANIE1_TCP_H
+#define DUZE_ZADANIE1_TCP_H
+
+
+
+#endif //DUZE_ZADANIE1_TCP_H
