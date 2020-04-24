@@ -14,21 +14,13 @@
 #include <unistd.h>
 #include "err.h"
 
-#define BUFFER_SIZE      1024
 #define HOST_SIZE      256
 #define PORT_SIZE      16
-#define MAX_REQUEST_HEAD_LEN      1024
+#define REQUEST_HEAD_LEN      1024
 #define COOKIES_MAX_SIZE    204800
+#define MAX_COOKIE_LINE 5000
+#define MAX_NAME 4096
 
-static const char bye_string[] = "BYE";
-
-void set_addr_hints(struct addrinfo *addr_hints) {
-    memset(addr_hints, 0, sizeof(struct addrinfo));
-    addr_hints->ai_flags = 0;
-    addr_hints->ai_family = AF_INET;
-    addr_hints->ai_socktype = SOCK_STREAM;
-    addr_hints->ai_protocol = IPPROTO_TCP;
-}
 
 int parse_host_port(char *host, char *port, char *host_port){
     char *delimiter = strchr(host_port,':');
@@ -82,10 +74,10 @@ int prepare_request_head(char *request_head, char *resource) {
     printf( "HOST %s\n", host);
     printf("TARGET %s\n", target);
 
-    request_head_len = snprintf(request_head, MAX_REQUEST_HEAD_LEN, get_header_template, target);
-    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, host_header_template, host);
-    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, cookie_header_head);
-//    request_head_len += snprintf(request_head + request_head_len, MAX_REQUEST_HEAD_LEN, connection_close_header);
+    request_head_len = snprintf(request_head, REQUEST_HEAD_LEN, get_header_template, target);
+    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, host_header_template, host);
+    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, cookie_header_head);
+//    request_head_len += snprintf(request_head + request_head_len, REQUEST_HEAD_LEN, connection_close_header);
 
     printf("%s", request_head);
     return request_head_len;
@@ -107,7 +99,7 @@ int read_cookies(FILE **cookies_file, char cookies[]) {
             cookies_len += cookie_line_len + 1;
         }
         else{
-            fputs(cookie_line, *cookies_file);
+            //tu trzba przesunac wskaznik pliku z powrotem
             break;
         }
     }
@@ -115,11 +107,34 @@ int read_cookies(FILE **cookies_file, char cookies[]) {
     return read_sth && (cookie_line_len < COOKIES_MAX_SIZE - cookies_len);
 }
 
+#define ISBLANK(x)  (int)((((unsigned char)x) == ' ') ||        \
+                          (((unsigned char)x) == '\t'))
+
+int get_cookie_size(char * tab) {
+    char *tabptr = tab;
+    while(tabptr && !ISBLANK(tabptr))
+        tabptr++;
+    return tabptr - tab;
+}
+
+int find_cookies(char response[], char *cookie) {
+    char *responseptr;
+    if (responseptr = strstr(responseptr, "Set-Cookie:") == 0) {
+        //to nie jest linia z set-cookie
+        return 0;
+    }
+    responseptr += 11;
+    while (*responseptr && ISBLANK(*responseptr))
+        responseptr++;
+
+    strncpy(cookie, responseptr, get_cookie_size);
+}
+
 int main (int argc, char *argv[]) {
     int rc;
     int sock;
     struct addrinfo addr_hints, *addr_result;
-    char request_head[MAX_REQUEST_HEAD_LEN];
+    char request_head[REQUEST_HEAD_LEN];
     char host[HOST_SIZE];
     char port[PORT_SIZE];
     char buffer[BUFFER_SIZE];
@@ -189,23 +204,29 @@ int main (int argc, char *argv[]) {
     printf("READ PART\n");
     /* Read the response. */
     fprintf(stderr, "debug: before first read\n");
-    memset(buffer, 0, sizeof(buffer));
-    nbytes_total = read(sock, buffer, BUFSIZ);
-    if (nbytes_total == -1) {
-        fatal("read");
-    }
-    char *token = NULL;
-    token = strtok(buffer, "\n");
-    // Not 200 OK
-    if (strstr(buffer, "200 OK") == 0) {
-        printf("%s", token);
-        return 0;
-    }
-    // 200 OK
-    int set_cookie_start = strstr(buffer, "Set-Cookie:");
-    printf("%s", set_cookie_start);
 
+    int first = 1;
     while ((nbytes_total = read(sock, buffer, BUFSIZ)) > 0) {
+        memset(buffer, 0, sizeof(buffer));
+        nbytes_total = read(sock, buffer, BUFSIZ);
+        if (nbytes_total == -1) {
+            fatal("read");
+        }
+//    write(STDOUT_FILENO, buffer, nbytes_total);
+        if (first) {
+            char *token = NULL;
+            token = strtok(buffer, "\n");
+            // Not 200 OK
+            if (strstr(buffer, "200 OK") == 0) {
+                printf("%s", token);
+                return 0;
+            }
+        }
+
+        // 200 OK
+
+
+
         fprintf(stderr, "debug: after a read\n");
         write(STDOUT_FILENO, buffer, nbytes_total);
     }
