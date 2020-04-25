@@ -14,8 +14,8 @@ http.o: http.c err.o
 cookies.o: cookies.c err.o
 	$(CC) -c cookies.c err.h
 
-errors.o: errors.c. errors.h
-	$(CC) -c errors.c
+err.o: err.c err.h
+	$(CC) -c err.c
 
 clean:
 	rm -f *.o
