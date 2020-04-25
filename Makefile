@@ -2,17 +2,17 @@ CC = gcc -Wall
 
 all: testhttp_raw
 
-testhttp_raw: testhttp_raw.c tcp.o http.o cookies.o err.o
-	$(CC) tcp.o http.o cookies.o testhttp_raw.c -o testhttp_raw
+testhttp_raw: testhttp_raw.c tcp.h http.h cookies.h err.h
+	$(CC) testhttp_raw.c -o testhttp_raw
 
-tcp.o: tcp.c err.o
-	$(CC) -c tcp.c err.h
+tcp.o: tcp.c err.h
+	$(CC) -c tcp.c
 
-http.o: http.c err.o
-	$(CC) -c http.c err.h
+http.o: http.c err.h
+	$(CC) -c http.c
 
-cookies.o: cookies.c err.o
-	$(CC) -c cookies.c err.h
+cookies.o: cookies.c err.h
+	$(CC) -c cookies.c
 
 err.o: err.c err.h
 	$(CC) -c err.c
