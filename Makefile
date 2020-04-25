@@ -3,7 +3,7 @@ CC = gcc -Wall
 all: testhttp_raw
 
 testhttp_raw: testhttp_raw.c tcp.o http.o cookies.o err.o
-	$(CC) tcp.o http.o cookies.o testhttp_raw.c -o main
+	$(CC) tcp.o http.o cookies.o testhttp_raw.c -o testhttp_raw
 
 tcp.o: tcp.c err.o
 	$(CC) -c tcp.c err.h
