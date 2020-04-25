@@ -1,21 +1,16 @@
 CC = gcc -Wall
+TARGETS = testhttp_raw
 
-all: testhttp_raw
+all: $(TARGETS) 
 
-testhttp_raw: testhttp_raw.c tcp.h http.h cookies.h err.h
-	$(CC) testhttp_raw.c -o testhttp_raw
+err.o: err.h
 
-tcp.o: tcp.c err.h
-	$(CC) -c tcp.c
+tcp.o: tcp.h err.h
 
-http.o: http.c err.h
-	$(CC) -c http.c
+http.o: http.h err.h
 
-cookies.o: cookies.c err.h
-	$(CC) -c cookies.c
+cookies: cookies.h err.h
 
-err.o: err.c err.h
-	$(CC) -c err.c
+testhttp_raw.o: testhttp_raw.c tcp.h http.h  err.h
 
-clean:
-	rm -f *.o
+testhttp_raw: testhttp_raw.o tcp.o http.o cookies.o err.o
