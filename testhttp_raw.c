@@ -8,6 +8,10 @@
 #include <unistd.h>
 #include "err.h"
 
+#include "tcp.h"
+#include "http.h"
+#include "cookies.h"
+
 #define MAX_HEADER_SIZE 8192
 #define cookies buffer
 #define cookies_len buffer_len
@@ -19,22 +23,22 @@
 int main (int argc, char *argv[]) {
     char buffer[BUFSIZ];
     char *buffer_ptr;
-    size_t sock, buffer_len, data_section, headers_section, chunked, header_len, data_processed, chunked_data_size;
+    size_t sock, buffer_len, data_section, headers_section, chunked, header_len, data_processed, data_len, chunked_data_size;
+    FILE *cookies_file;
 
     if (argc != 4) fatal("Usage: %s connectio-host:connection-port file resource-adress", argv[0]);
 
     sock = set_connection(argv[1]);
 
-    FILE *a;
-    //Prepare request_head
-    buffer_len = prepare_request_head(argv[3], buffer, &buffer_len);
+    buffer_len = prepare_request_head(argv[3], buffer);
     send_data(sock, buffer, buffer_len);
 
+    cookies_file = get_file_desc(argv[2]);
      while (read_cookies(&cookies_file, cookies, &cookies_len)) {
         send_data(sock, cookies, cookies_len);
     }
     // Close connection
-    prepare_close_header(buffer, buffer_len);
+    prepare_close_header(buffer, &buffer_len);
     send_data(sock, buffer, buffer_len);
 
     headers_section = 1;

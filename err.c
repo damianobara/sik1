@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include "err.h"
 
 void syserr(const char *fmt, ...) {
   va_list fmt_args;

@@ -4,8 +4,14 @@
 #include <string.h>
 #include "err.h"
 
+
+//todo change me
+#define HOST_SIZE 1000
+#define PORT_SIZE 100
+#define REQUEST_HEAD_LEN 1000
+
 size_t is_status_200(char response[]) {
-    return  strstr(buffer, "200 OK") != 0;
+    return  strstr(response, "200 OK") != 0;
 }
 
 size_t print_status(char response[]) {
@@ -31,7 +37,29 @@ void parse_request_resourse(char resource[], char target[], char host[]) {
 }
 
 
-size_t prepare_request_head(char *resource, char *request_head, char *request_head_len) {
+size_t get_header(char response[],size_t response_len, char **header, size_t *header_len, size_t max_header_size, size_t *headers_section, size_t *data_section) {
+    //todo
+    return 1;
+
+}
+
+size_t is_chunked(char header[], size_t max_header_size) {
+    //todo
+    return 1;
+}
+
+size_t get_chunked_data_size(char response[], size_t response_len) {
+    //todo
+    return 1;
+}
+
+size_t process_data(char response[], size_t response_len, char *data_ptr, size_t *data_len, size_t data_processed, size_t *data_section) {
+    //todo
+    return 1;
+}
+
+
+size_t prepare_request_head(char *resource, char *request_head) {
     int request_head_len = 0;
     char host[HOST_SIZE];
     char target[HOST_SIZE];
@@ -55,3 +83,4 @@ void prepare_close_header(char close_header[], size_t *close_header_len) {
     close_header = "\nConnection: close\n\n";
     *close_header_len = 0;
 }
+

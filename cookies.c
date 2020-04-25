@@ -7,7 +7,15 @@
 
 #define ISBLANK(x)  (int)((((unsigned char)x) == ' ') ||        \
                           (((unsigned char)x) == '\t'))
+#define COOKIES_MAX_SIZE 4096
 #define MAX_COOKIE_SIZE 4096
+
+size_t get_cookie_len(char *cookie, size_t cookie_tab_len) {
+    char *cookie_ptr = cookie;
+    while(cookie_ptr - cookie < cookie_tab_len && cookie_ptr - cookie < MAX_COOKIE_SIZE && cookie_ptr && !ISBLANK(cookie_ptr))
+        cookie_ptr++;
+    return cookie_ptr - cookie;
+}
 
 size_t handle_cookie(char header[], size_t header_len) {
     char *cookie_ptr;
@@ -23,12 +31,6 @@ size_t handle_cookie(char header[], size_t header_len) {
 }
 
 
-size_t get_cookie_len(char *cookie, size_t cookie_tab_len) {
-    char *cookie_ptr = cookie;
-    while(cookie_ptr - cookie < cookie_tab_len && cookie_ptr - cookie < MAX_COOKIE_SIZE && cookie_ptr && !ISBLANK(cookie_ptr))
-        cookie_ptr++;
-    return cookie_ptr - cookie;
-}
 
 FILE *get_file_desc(char *file_name){
     FILE *cookies_file;
@@ -60,7 +62,7 @@ size_t read_cookies(FILE **cookies_file, char cookies[], size_t *cookies_string_
         }
     }
     printf("%s", cookies);
-    *cookies_string_len = strlen(cookies)
+    *cookies_string_len = strlen(cookies);
     return read_sth && (cookie_line_len < COOKIES_MAX_SIZE - cookies_len);
 }
 

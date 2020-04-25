@@ -4,6 +4,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "err.h"
 
 #define HOST_SIZE      256
 #define PORT_SIZE      16
@@ -59,11 +60,11 @@ int set_connection(char host_port[]) {
     return sock;
 }
 
-size_t send_data(size_t socket, buffer, buffer_size) {
+size_t send_data(size_t sock, char buffer[], size_t buffer_size) {
     size_t nbytes_last, nbytes_total = 0;
     nbytes_total = 0;
     while (nbytes_total < buffer) {
-        nbytes_last = write(sock, cookies + nbytes_total, cookies_len - nbytes_total);
+        nbytes_last = write(sock, buffer + nbytes_total, buffer - nbytes_total);
         if (nbytes_last == -1) {
             perror("write");
             exit(EXIT_FAILURE);
