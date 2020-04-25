@@ -15,7 +15,7 @@ size_t is_status_200(char response[]) {
 }
 
 size_t print_status(char response[]) {
-    print("%s", response);
+    printf("%s", response);
 }
 
 void parse_request_resourse(char resource[], char target[], char host[]) {
