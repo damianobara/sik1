@@ -1,4 +1,4 @@
-CC = gcc -Wall
+CC = gcc -Wall -Wextra
 
 all: testhttp_raw
 

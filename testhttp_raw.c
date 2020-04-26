@@ -22,8 +22,8 @@
 
 int main (int argc, char *argv[]) {
     char buffer[BUFSIZ];
-    char *buffer_ptr;
-    size_t sock, buffer_len, data_section, headers_section, chunked, header_len, data_processed, data_len, chunked_data_size;
+    size_t sock, buffer_len, response_section, headers_section, data_section, continuation;
+    size_t chunked, chunk_time, data_processed;
     FILE *cookies_file;
 
     if (argc != 4) fatal("Usage: %s connectio-host:connection-port file resource-adress", argv[0]);
@@ -41,22 +41,26 @@ int main (int argc, char *argv[]) {
     prepare_close_header(buffer, &buffer_len);
     send_data(sock, buffer, buffer_len);
 
-    headers_section = 1;
+    response_section = 1;
+    headers_section = 0;
     data_section = 0;
+    continuation = 0;
+    memset(response, '\0', BUFSIZ);
     while ((response_len = read(sock, response, BUFSIZ)) > 0) {
-        if (!is_status_200(response)) {
-            print_status(response);
+        buffer_len = BUFSIZ;
+        if (response_section && !handle_response_status(&response, &response_len, &response_section, &headers_section)) {
             return 0;
         }
-
-        while(headers_section && get_header(response, response_len, &header, &header_len, MAX_HEADER_SIZE, &headers_section, &data_section)) {
-            chunked = is_chunked(header, MAX_HEADER_SIZE);
-            handle_cookie(header, header_len);
+        while(response_len && headers_section) {
+            handle_header(&response, &response_len, &headers_section, &data_section, &chunked);
         }
-        if (data_section && chunked) {
-            chunked_data_size = get_chunked_data_size(response, response_len);
+        while (response_len && data_section) {
+            process_data(response, response_len, &data_processed, &data_section, chunked, &chunk_time);
         }
-        while(data_section && process_data(response, response_len, &data, &data_len, &data_processed, data_section));
+        if (!data_section) {
+            printf("%d", data_processed);
+            break;
+        }
     }
     close(sock);
     exit(EXIT_SUCCESS);

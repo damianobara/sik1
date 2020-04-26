@@ -1,10 +1,12 @@
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "err.h"
+
 
 #define HOST_SIZE      256
 #define PORT_SIZE      16
@@ -63,8 +65,8 @@ int set_connection(char host_port[]) {
 size_t send_data(size_t sock, char buffer[], size_t buffer_size) {
     size_t nbytes_last, nbytes_total = 0;
     nbytes_total = 0;
-    while (nbytes_total < buffer) {
-        nbytes_last = write(sock, buffer + nbytes_total, buffer - nbytes_total);
+    while (nbytes_total < buffer_size) {
+        nbytes_last = write(sock, buffer + nbytes_total, buffer_size - nbytes_total);
         if (nbytes_last == -1) {
             perror("write");
             exit(EXIT_FAILURE);
